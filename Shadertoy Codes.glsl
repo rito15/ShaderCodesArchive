@@ -1,23 +1,32 @@
 
-// DEFINITIONS : Unity Compatibility
+
+/**************************************************************************************************
+ * DEFINITIONS : Unity Compatibility
+ **************************************************************************************************/
 #define float2   vec2
 #define float3   vec3
 #define float4   vec4
 #define float2x2 mat2
 #define float3x3 mat3
 #define float4x4 mat3
+
 #define frac(x)     fract(x)
 #define lerp(a,b,t) mix(a,b,t)
 #define atan2(y,x)  atan(x,y)
 #define tex2D(s,t)  texture(s,t)
 
-float2 mul(float2x2 m, float2 v)
-{
-	return v * m;   
-}
+#define mul(mat, vec) vec*mat;
 
-// DEBUG Functions =================================================================================
 
+/**************************************************************************************************
+ * DEFINITIONS
+ **************************************************************************************************/
+#define S(a, b, t) smoothstep(a, b, t)
+
+
+/**************************************************************************************************
+ * DEBUG Functions 
+ **************************************************************************************************/
 float3 debugCenterLine(float2 uv)
 {
     if(uv.x > 0.498 && uv.x < 0.502 || uv.y > 0.498 && uv.y < 0.502)
@@ -53,6 +62,30 @@ float3 debugGrid(float2 uv)
     
     return float3(0., grid, 0.);
     //return float3(gridXY, 0.);
+}
+
+/**************************************************************************************************
+ * Noise, Random
+ **************************************************************************************************/
+#define NOISE(uv) frac(sin(uv.x * 1234. + uv.y * 2345.) * 3456.)
+
+float N21(float2 p)
+{
+    p = frac(p * float2(123.34, 345.45));
+    p += dot(p, p + 34.345);
+    return frac(p.x * p.y);
+}
+
+float Random21(float2 seed, float min, float max)
+{
+    float t = frac(sin(dot(seed, float2(73.867, 25.241))) * 39482.17593);
+    return lerp(min, max, t);
+}
+
+float Random11(float seed, float min, float max)
+{
+    float t = frac(sin(seed * 13.421 + 23.512) * 17593.39482);
+    return lerp(min, max, t);
 }
 
 //==================================================================================================
@@ -98,7 +131,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     
     //uv2 = uvTile;
     //uv2 = uvRot;
-    uv2 = uvPulse;
+    //uv2 = uvPulse;
     
     ////////////////////////////////////////////////////////////////////////////////////
     
@@ -188,6 +221,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     float crossStar = smoothstep(crossStarSize, crossStarSize - crossStarBlur, abs(uv2.x * uv2.y));
     
     ////////////////////////////////////////////////////////////////////////////////////
+    
     // 최종 색상
     col += heart;
     
