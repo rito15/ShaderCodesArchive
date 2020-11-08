@@ -1,5 +1,3 @@
-
-
 /**************************************************************************************************
  * DEFINITIONS : Unity Compatibility
  **************************************************************************************************/
@@ -86,6 +84,21 @@ float Random11(float seed, float min, float max)
 {
     float t = frac(sin(seed * 13.421 + 23.512) * 17593.39482);
     return lerp(min, max, t);
+}
+
+/**************************************************************************************************
+ * CheckerBoard
+ **************************************************************************************************/
+// 체크무늬 격자
+// uv에 맞물리는 결과를 얻으려면 resolution에 PI의 배수를 넣어줘야 함
+float CheckerBoard(float2 uv, float resolution)
+{
+    return ceil(sin(uv.x * resolution) * sin(uv.y * resolution));
+}
+// 대각선 체크무늬 격자
+float DiagonalCheckerBoard(float2 uv, float resolution)
+{
+    return clamp(ceil(sin(uv.x * resolution) + sin(uv.y * resolution)), 0., 1.);
 }
 
 //==================================================================================================
@@ -223,7 +236,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    col += heart;
+    //col += heart;
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
