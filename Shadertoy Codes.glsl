@@ -102,6 +102,68 @@ float DiagonalCheckerBoard(float2 uv, float resolution)
     return clamp(ceil(sin(uv.x * resolution) + sin(uv.y * resolution)), 0., 1.);
 }
 
+/**************************************************************************************************
+ * Basic Shapes
+ **************************************************************************************************/
+
+// 직선 : 시작점, 끝점, 굵기
+float Line(float2 uv, float2 p1, float2 p2, float thickness, float smoothness)
+{
+    // zero div 회피
+    p1 += 0.000001;
+    p2 -= 0.000001;
+    
+    // 범위제한
+    smoothness = clamp(smoothness, 0.0001, 1.);
+    thickness = max(0.01, thickness);
+    
+    float w = abs(p2.x - p1.x);
+    float h = abs(p2.y - p1.y);
+    float len = sqrt(w*w + h*h); // 직선 길이(빗변 이용)
+    
+    float slope = (p2.y - p1.y)/(p2.x - p1.x); 	// 기울기
+    float2 center = (p2 + p1) * 0.5; 			// 중심점
+    
+    // 1. 두께 제한
+    // 기울기가 변해도 굵기, 부드러움이 유지되도록 계산
+    // smoothstep 내에 적용되는 실제 thickness는 빗변이 아니고 width 값이므로
+    // (len / width)를 곱해줌으로써 빗변 길이가 실제 thickness로 적용되도록 해줌
+    float th = thickness * (len / w);
+    float sm = smoothness * (len / w);
+    float line = smoothstep(th, th - sm, abs((uv.x - center.x) * slope - (uv.y - center.y)));
+    
+    // 2. 길이 제한
+    float revTh = (len * 0.5) * (len / h); // 제한선 두께
+    float revSm = smoothness * (len / h);  // 제한선 스무딩
+    line *= smoothstep(revTh , revTh - revSm, abs(-(uv.x - center.x) / slope - (uv.y - center.y)));
+    
+ 	return line;   
+}
+
+// 직사각형 : 좌하단 정점, 우상단 정점
+float Rectangle(float2 uv, float2 p1, float2 p2, float smoothness)
+{
+    return 0.;
+}
+
+// 직사각형 : 중심점, 너비, 높이
+float Rectangle(float2 uv, float2 center, float width, float height, float smoothness)
+{
+    return 0.;
+}
+
+// 원(타원) : 좌하단 정점, 우상단 정점
+float Circle(float2 uv, float2 p1, float2 p2, float smoothness)
+{
+    return 0.;
+}
+
+// 원(타원) : 중심점, 너비, 높이
+float Circle(float2 uv, float2 center, float width, float height, float smoothness)
+{
+    return 0.;
+}
+
 //==================================================================================================
 
 void mainImage( out float4 fragColor, in float2 fragCoord )
@@ -237,7 +299,15 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    col += heart;
+    //col += heart;
+    
+    
+    
+    
+    float lineA = Line(uv2, float2(0., 0.0), float2(0.0, 0.3), 0., 0.0);
+    
+    col += lineA;
+    
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
