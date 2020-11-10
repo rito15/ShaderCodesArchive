@@ -36,31 +36,34 @@ float3 debugOutLine(float2 uv)
     if(uv.x > 1.0 && uv.x <= 1.004 || uv.x < 0.0 && uv.x >= -0.004)
         return float3(0., 0., 1.);
 }
-float3 debugGrid(float2 uv)
+float3 debugGrid(float2 uv, float interval)
 {
-    // 0.1마다 그리드 디버그
+    // interval마다 그리드 디버그
     float grid = 0.;
+    float gridZ = 0.;
     float2 gridXY = float2(0.);
-    for(float f = 0.1; f < 1.0; f += 0.1)
+    
+    float th = 0.002; // thickness
+    
+    for(float f = interval; f < 1.0; f += interval)
     {
-        // 가로선
-        if(uv.y >= f - 0.002 && uv.y <= f + 0.002 && uv.x > 0. && uv.x < 1.)
+        // 가로선 || 세로선
+        if(uv.y >= f - th && uv.y <= f + th && uv.x > 0. && uv.x < 1. ||
+           uv.x >= f - th && uv.x <= f + th)
         {
-            grid = 1.;
-            gridXY = uv + 0.4; 
+            grid = 0.7;
+            gridXY = uv + float2(0.2, 0.4);
+            
+            if( frac(f * 4.) < 0.01 )
+            {
+                grid = 1.;
+                gridZ = 1.;
+            }
         }
-        
-        // 세로선
-        if(uv.x >= f - 0.002 && uv.x <= f + 0.002)
-        {
-            grid = 1.;
-            gridXY = uv + 0.4;
-        }
-        
     }
     
-    return float3(0., grid, 0.);
-    //return float3(gridXY, 0.);
+    return float3(0., grid, gridZ);
+    //return float3(gridXY, gridZ); //알록달록
 }
 
 /**************************************************************************************************
@@ -105,6 +108,11 @@ float DiagonalCheckerBoard(float2 uv, float resolution)
 /**************************************************************************************************
  * Basic Shapes
  **************************************************************************************************/
+// 점
+float Point(float2 uv, float2 p)
+{
+    return smoothstep(0.03, 0.02, length(uv - p));
+}
 
 // 선분 : 시작점, 끝점, 굵기
 float Line(float2 uv, float2 p1, float2 p2, float thickness, float smoothness)
@@ -144,28 +152,52 @@ float Line(float2 uv, float2 p1, float2 p2, float thickness, float smoothness)
 }
 
 // Straight Vertical Line
-// 세로 직선 : x좌표
+// 세로 직선 : x좌표, 굵기
 float SVLine(float2 uv, float posX, float thickness, float smoothness)
 {
     return smoothstep(thickness * 0.5, thickness * 0.5 - smoothness, abs(uv.x - posX));
 }
 
-// 세로 쌍직선 : 중심의 x좌표, 두 직선 사이 거리
+// 세로 쌍직선 : 중심 x좌표, 두 직선 사이 거리, 굵기
 float SDVLine(float2 uv, float posX, float dist, float thickness, float smoothness)
 {
     return smoothstep(thickness * 0.5, thickness * 0.5 - smoothness, abs(abs(uv.x - posX) - dist * 0.5));
 }
 
-// 직사각형 : 좌하단 정점, 우상단 정점
-float Rectangle(float2 uv, float2 p1, float2 p2, float smoothness)
+// 직사각형 : 좌하단, 우상단 정점 좌표
+float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
 {
-    return 0.;
+    float2 center = (p1 + p2) * 0.5;
+    float  width  = (p2.x - p1.x) * 0.5;
+    float  height = (p2.y - p1.y) * 0.5;
+    
+    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
+         rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
+    
+    return rect;
 }
 
 // 직사각형 : 중심점, 너비, 높이
-float Rectangle(float2 uv, float2 center, float width, float height, float smoothness)
+float Rect(float2 uv, float2 center, float width, float height, float smoothness)
 {
-    return 0.;
+    center = float2(0.3, 0.6);
+    width  = 0.6;
+    height = 0.4;
+    smoothness = 0.01;
+    
+    width *= 0.5;
+    height *= 0.5;
+    
+    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
+         rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
+    
+    return rect;
+}
+
+// 원 : 중심좌표, 반지름
+float Circle(float2 uv, float2 center, float radius, float smoothness)
+{
+    return smoothstep(radius, radius - smoothness, length(uv - center));
 }
 
 // 원(타원) : 좌하단 정점, 우상단 정점
@@ -174,7 +206,7 @@ float Circle(float2 uv, float2 p1, float2 p2, float smoothness)
     return 0.;
 }
 
-// 원(타원) : 중심점, 너비, 높이
+// 원(타원) : 중심좌표, 너비, 높이
 float Circle(float2 uv, float2 center, float width, float height, float smoothness)
 {
     return 0.;
@@ -245,14 +277,14 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     // 사각형
     
-    float2  rectPos    = float2(0.0, 0.0); // 중심 위치
-    float2  rectSizeWH = float2(0.6, 0.4); // 너비, 높이
-    float rectBlur   = 0.01;
-    float rect = smoothstep(rectSizeWH.x, rectSizeWH.x - rectBlur, abs(uv2.x - rectPos.x));
-         rect *= smoothstep(rectSizeWH.y, rectSizeWH.y - rectBlur, abs(uv2.y - rectPos.y));
+    float rect  = Rect(uv2, float2(-0.3, -0.2), float2(0.4, 0.5), 0.01);
+    float rect2 = Rect(uv2, float2(0.2, 0.2), 0.4, 0.2, 0.01);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 원
+    
+    float cc = Circle(uv2, float2(-0.3, -0.4), 0.2, 0.01);
+    
     float2  circlePos  = float2(0.0, 0.0);
     float circleSize = 0.5;
     float circleBlur = 0.1;
@@ -315,14 +347,13 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    col += sdvLine;
-    
-    
+    col += cc;
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
     col += debugOutLine(uv);    // 테두리 디버그
-    col += debugGrid(uv);       // 그리드 디버그
+    //col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
+    col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
     
     fragColor = float4(col,1.0);
 }
