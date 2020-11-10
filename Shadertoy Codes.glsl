@@ -9,12 +9,13 @@
 #define float4x4 mat3
 
 #define frac(x)     fract(x)
+#define saturate(x) clamp(x, 0., 1.)
+
+#define atan2(x,y)    atan(y,x)
+#define tex2D(s,t)    texture(s,t)
+#define mul(mat,vec)  vec*mat;
+
 #define lerp(a,b,t) mix(a,b,t)
-#define atan2(y,x)  atan(x,y)
-#define tex2D(s,t)  texture(s,t)
-
-#define mul(mat, vec) vec*mat;
-
 
 /**************************************************************************************************
  * DEFINITIONS
@@ -236,7 +237,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    //col += heart;
+    col += heart;
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
