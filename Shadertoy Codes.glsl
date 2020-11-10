@@ -106,16 +106,19 @@ float DiagonalCheckerBoard(float2 uv, float resolution)
  * Basic Shapes
  **************************************************************************************************/
 
-// 직선 : 시작점, 끝점, 굵기
+// 선분 : 시작점, 끝점, 굵기
 float Line(float2 uv, float2 p1, float2 p2, float thickness, float smoothness)
 {
     // zero div 회피
     p1 += 0.000001;
     p2 -= 0.000001;
     
+    // 두께 반감
+    thickness *= 0.5;
+    
     // 범위제한
+    thickness = max(0.005, thickness);
     smoothness = clamp(smoothness, 0.0001, 1.);
-    thickness = max(0.01, thickness);
     
     float w = abs(p2.x - p1.x);
     float h = abs(p2.y - p1.y);
@@ -138,6 +141,19 @@ float Line(float2 uv, float2 p1, float2 p2, float thickness, float smoothness)
     line *= smoothstep(revTh , revTh - revSm, abs(-(uv.x - center.x) / slope - (uv.y - center.y)));
     
  	return line;   
+}
+
+// Straight Vertical Line
+// 세로 직선 : x좌표
+float SVLine(float2 uv, float posX, float thickness, float smoothness)
+{
+    return smoothstep(thickness * 0.5, thickness * 0.5 - smoothness, abs(uv.x - posX));
+}
+
+// 세로 쌍직선 : 중심의 x좌표, 두 직선 사이 거리
+float SDVLine(float2 uv, float posX, float dist, float thickness, float smoothness)
+{
+    return smoothstep(thickness * 0.5, thickness * 0.5 - smoothness, abs(abs(uv.x - posX) - dist * 0.5));
 }
 
 // 직사각형 : 좌하단 정점, 우상단 정점
@@ -210,25 +226,25 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     //uv2 = uvPulse;
     
     ////////////////////////////////////////////////////////////////////////////////////
+    // 선분
     
-    // 직선
-    float linePosX = 0.5;        // 직선 중심의 x 좌표
-    float lineThickness = 0.1;   // 직선 굵기
-    float lineBlur = 0.01;       // 직선 평활도
-    float line = smoothstep(lineThickness, lineThickness - lineBlur,
-                            abs(uv2.x - linePosX));
+    float2 linePointA = float2(-0.2, 0.4);
+    float2 linePointB = float2(0.4, -0.2);
+    float line = Line(uv2, linePointA, linePointB, 0.1, 0.);
     
     ////////////////////////////////////////////////////////////////////////////////////
-    // 쌍직선
-    float dLinePosX = 0.5;         // 중심 x 좌표
-    float dLineThickness = 0.1;    // 쌍직선 굵기
-    float dLineBlur = 0.001;       // 쌍직선 블러 정도
-    float dLineDistance = 0.2;     // 직선 사이 거리
-    float dLine = smoothstep(dLineThickness, dLineThickness - dLineBlur, 
-                             abs(abs(uv2.x - dLinePosX) - dLineDistance * 2.));
+    // 세로 직선
+    
+    float svLine = SVLine(uv2, 0.65, 0.1, 0.001);
+    
+    ////////////////////////////////////////////////////////////////////////////////////
+    // 세로 쌍직선
+    
+    float sdvLine = SDVLine(uv2, 0.4, 0.4, 0.1, 0.01);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 사각형
+    
     float2  rectPos    = float2(0.0, 0.0); // 중심 위치
     float2  rectSizeWH = float2(0.6, 0.4); // 너비, 높이
     float rectBlur   = 0.01;
@@ -299,14 +315,8 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    //col += heart;
+    col += sdvLine;
     
-    
-    
-    
-    float lineA = Line(uv2, float2(0., 0.0), float2(0.0, 0.3), 0., 0.0);
-    
-    col += lineA;
     
     
     // 디버그 옵션
