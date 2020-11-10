@@ -164,6 +164,18 @@ float SDVLine(float2 uv, float posX, float dist, float thickness, float smoothne
     return smoothstep(thickness * 0.5, thickness * 0.5 - smoothness, abs(abs(uv.x - posX) - dist * 0.5));
 }
 
+// 직사각형 : 중심점, 너비, 높이
+float Rect(float2 uv, float2 center, float width, float height, float smoothness)
+{
+    width *= 0.5;
+    height *= 0.5;
+    
+    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
+         rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
+    
+    return rect;
+}
+
 // 직사각형 : 좌하단, 우상단 정점 좌표
 float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
 {
@@ -177,39 +189,41 @@ float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
     return rect;
 }
 
-// 직사각형 : 중심점, 너비, 높이
-float Rect(float2 uv, float2 center, float width, float height, float smoothness)
-{
-    center = float2(0.3, 0.6);
-    width  = 0.6;
-    height = 0.4;
-    smoothness = 0.01;
-    
-    width *= 0.5;
-    height *= 0.5;
-    
-    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
-         rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
-    
-    return rect;
-}
-
 // 원 : 중심좌표, 반지름
 float Circle(float2 uv, float2 center, float radius, float smoothness)
 {
     return smoothstep(radius, radius - smoothness, length(uv - center));
 }
 
-// 원(타원) : 좌하단 정점, 우상단 정점
-float Circle(float2 uv, float2 p1, float2 p2, float smoothness)
-{
-    return 0.;
-}
-
 // 원(타원) : 중심좌표, 너비, 높이
 float Circle(float2 uv, float2 center, float width, float height, float smoothness)
 {
-    return 0.;
+    return smoothstep(1., 1. - smoothness, length((uv - center) / float2(width, height) * 2.));
+}
+
+// 원(타원) : 좌하단 정점, 우상단 정점
+float Circle(float2 uv, float2 p1, float2 p2, float smoothness)
+{
+    float2 center = (p2 + p1) * 0.5;
+    float width  = (p2.x - p1.x);
+    float height = (p2.y - p1.y);
+    
+    return smoothstep(1., 1. - smoothness, length((uv - center) / float2(width, height) * 2.));
+}
+
+// 물방울 : TODO
+float Drop(float2 uv, float2 center, float width, float height, float smoothness)
+{
+    center = float2(0.2, 0.2);
+    width = 0.4;
+    height = 0.6;
+    smoothness = 0.01;
+    
+    float2 uvDrop = uv - center;
+    
+    float2  dropBase = float2(uvDrop.x * 2.,
+                          uvDrop.y + (uvDrop.x * (acos(cos(uvDrop.x)) + 2.) * sin(uvDrop.x)));
+    return smoothstep(0.5, 0.5 - smoothness, length(dropBase));
 }
 
 //==================================================================================================
@@ -251,6 +265,8 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     float pulseRange = 0.2; // 박동범위
     float2 uvPulse = uv2 * (1. + sin(_Time.y * pulseSpeed)* pulseRange);
     
+    // TODO : 일렁이는 uv
+    
     // 특정 UV 적용
     
     //uv2 = uvTile;
@@ -266,48 +282,26 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 세로 직선
-    
     float svLine = SVLine(uv2, 0.65, 0.1, 0.001);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 세로 쌍직선
-    
     float sdvLine = SDVLine(uv2, 0.4, 0.4, 0.1, 0.01);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 사각형
-    
-    float rect  = Rect(uv2, float2(-0.3, -0.2), float2(0.4, 0.5), 0.01);
+    float rect1 = Rect(uv2, float2(-0.3, -0.2), float2(0.4, 0.5), 0.01);
     float rect2 = Rect(uv2, float2(0.2, 0.2), 0.4, 0.2, 0.01);
     
     ////////////////////////////////////////////////////////////////////////////////////
-    // 원
-    
-    float cc = Circle(uv2, float2(-0.3, -0.4), 0.2, 0.01);
-    
-    float2  circlePos  = float2(0.0, 0.0);
-    float circleSize = 0.5;
-    float circleBlur = 0.1;
-    float circleBase = 1. - length((uv2 - circlePos) / circleSize);
-    float circle = smoothstep(.0, circleBlur, circleBase);
-    
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 타원
-    float2  ellipsePos    = float2(0.0, 0.0);
-    float2  ellipseSizeWH = float2(0.4, 0.3);
-    float ellipseBlur = 0.01;
-    float ellipseBase = 1. - length((uv2 - ellipsePos) / ellipseSizeWH);
-    float ellipse = smoothstep(.0, ellipseBlur, ellipseBase);
+    // 원, 타원
+    float circle1 = Circle(uv2, float2(-0.3, -0.4), 0.2, 0.01);
+    float circle2 = Circle(uv2, float2(0.3, 0.6), 0.3, 0.4, 0.01);
+    float circle3 = Circle(uv2, float2(-0.2, -0.4), float2(0.4, 0.2), 0.1);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 물방울 - TODO : 상단 뾰족하게
-    float2  dropPos    = float2(0.0, 0.0);
-    float2  dropSizeWH = float2(0.3, 0.3);
-    float dropBlur = 0.05;
-    float2  uvDrop   = (uv2 - dropPos) / (dropSizeWH * 2.);
-    float2  dropBase = float2(uvDrop.x * 2.,
-                          uvDrop.y + ((uvDrop.x) * (cos(uvDrop.x) + 2.) * sin(uvDrop.x)));
-    float drop = smoothstep(0.5, 0.5 - dropBlur, length(dropBase));
+    float drop = Drop(uv2, float2(0.2, 0.2), 0.4, 0.6, 0.01);
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 하트
@@ -347,7 +341,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    col += cc;
+    col += drop;
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
