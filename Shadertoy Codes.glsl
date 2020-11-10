@@ -170,7 +170,7 @@ float Rect(float2 uv, float2 center, float width, float height, float smoothness
     width *= 0.5;
     height *= 0.5;
     
-    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
+    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x)); // 세로
          rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
     
     return rect;
@@ -183,7 +183,7 @@ float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
     float  width  = (p2.x - p1.x) * 0.5;
     float  height = (p2.y - p1.y) * 0.5;
     
-    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x));   // 세로
+    float rect = smoothstep(width,   width - smoothness, abs(uv.x - center.x)); // 세로
          rect *= smoothstep(height, height - smoothness, abs(uv.y - center.y)); // 가로
     
     return rect;
@@ -224,6 +224,19 @@ float Drop(float2 uv, float2 center, float width, float height, float smoothness
     float2  dropBase = float2(uvDrop.x * 2.,
                           uvDrop.y + (uvDrop.x * (acos(cos(uvDrop.x)) + 2.) * sin(uvDrop.x)));
     return smoothstep(0.5, 0.5 - smoothness, length(dropBase));
+}
+
+/**************************************************************************************************
+ * Digits
+ **************************************************************************************************/
+// 기본 : 한 칸 채우기
+float DigitSquare(float2 uv, float2 center, float width)
+{
+    width *= 0.5;
+    
+    float rect = 1.- step(width, abs(uv.x - center.x));
+         rect *= 1.- step(width, abs(uv.y - center.y));
+    return rect;
 }
 
 //==================================================================================================
@@ -341,13 +354,81 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    col += drop;
+    //col += drop;
+    
+    
+    
+    float2 dgUnit = float2(1., 1.) * 0.1;
+    float2 dgUnith = dgUnit * 0.5;
+    
+    // Dots
+    float dg00 = DigitSquare(uv, dgUnith, dgUnit.x);
+    float dg01 = DigitSquare(uv, dgUnith + dgUnit * float2(0.0, 1.0), dgUnit.x);
+    float dg02 = DigitSquare(uv, dgUnith + dgUnit * float2(0.0, 2.0), dgUnit.x);
+    float dg03 = DigitSquare(uv, dgUnith + dgUnit * float2(0.0, 3.0), dgUnit.x);
+    float dg04 = DigitSquare(uv, dgUnith + dgUnit * float2(0.0, 4.0), dgUnit.x);
+    
+    float dg10 = DigitSquare(uv, dgUnith + dgUnit * float2(1.0, 0.0), dgUnit.x);
+    float dg11 = DigitSquare(uv, dgUnith + dgUnit * float2(1.0, 1.0), dgUnit.x);
+    float dg12 = DigitSquare(uv, dgUnith + dgUnit * float2(1.0, 2.0), dgUnit.x);
+    float dg13 = DigitSquare(uv, dgUnith + dgUnit * float2(1.0, 3.0), dgUnit.x);
+    float dg14 = DigitSquare(uv, dgUnith + dgUnit * float2(1.0, 4.0), dgUnit.x);
+    
+    float dg20 = DigitSquare(uv, dgUnith + dgUnit * float2(2.0, 0.0), dgUnit.x);
+    float dg21 = DigitSquare(uv, dgUnith + dgUnit * float2(2.0, 1.0), dgUnit.x);
+    float dg22 = DigitSquare(uv, dgUnith + dgUnit * float2(2.0, 2.0), dgUnit.x);
+    float dg23 = DigitSquare(uv, dgUnith + dgUnit * float2(2.0, 3.0), dgUnit.x);
+    float dg24 = DigitSquare(uv, dgUnith + dgUnit * float2(2.0, 4.0), dgUnit.x);
+    
+    // Digit 0 ~ 9
+    float digit0 = dg00 + dg01 + dg02 + dg03 + dg04 +
+                   dg10 +                      dg14 + 
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit1 = dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit2 = dg00 + dg01 + dg02 +        dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 +        dg22 + dg23 + dg24;
+    
+    float digit3 = dg00 +        dg02 +        dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit4 =               dg02 + dg03 + dg04 +
+                                 dg12 +               
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit5 = dg00 +        dg02 + dg03 + dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 + dg21 + dg22 +        dg24;
+    
+    float digit6 = dg00 + dg01 + dg02 + dg03 + dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 + dg21 + dg22 +        dg24;
+    
+    float digit7 =               dg02 + dg03 + dg04 +
+                                               dg14 + 
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit8 = dg00 + dg01 + dg02 + dg03 + dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    float digit9 = dg00 +        dg02 + dg03 + dg04 +
+                   dg10 +        dg12 +        dg14 + 
+                   dg20 + dg21 + dg22 + dg23 + dg24;
+    
+    
+    float digitDot = dg10;
+    
+    col += digit9;
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
     col += debugOutLine(uv);    // 테두리 디버그
-    //col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
-    col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
+    col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
+    //col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
     
     fragColor = float4(col,1.0);
 }
