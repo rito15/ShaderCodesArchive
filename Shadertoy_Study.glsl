@@ -248,9 +248,10 @@ float DigitDot(float2 uv, float2 pivot, float unit)
 float DigitMinus(float2 uv, float2 pivot, float unit)
 {
     float2 pivotPoint = pivot + unit * 0.5;
-    return DigitSquare(uv, pivotPoint + unit * float2(0.0, 2.0), unit) +
-           DigitSquare(uv, pivotPoint + unit * float2(1.0, 2.0), unit) +
-           DigitSquare(uv, pivotPoint + unit * float2(2.0, 2.0), unit);
+    float m = DigitSquare(uv, pivotPoint + unit * float2(0.0, 2.0), unit) +
+              DigitSquare(uv, pivotPoint + unit * float2(1.0, 2.0), unit) +
+              DigitSquare(uv, pivotPoint + unit * float2(2.0, 2.0), unit);
+    return saturate(m);
 }
 
 // 숫자 표현 - pivot : 좌측 하단 기준점, unit : 단위 길이, digit : 정수 1개
@@ -378,25 +379,48 @@ float DebugValue(float2 uv, float2 pos, float unit, float value)
  	return DebugValue(uv, pos, unit, value, 4);   
 }
 
-// 색상값 표시 - RGB
-float3 DebugRGB(float2 uv, float2 pos, float unit, float3 rgb)
+// Float2 debug
+float DebugValue(float2 uv, float2 pos, float unit, float2 value2)
 {
-    float digits = DebugValue(uv - float2(0., unit * 12.), pos, unit, rgb.r, 4);
-         digits += DebugValue(uv - float2(0., unit * 6.),  pos, unit, rgb.g, 4);
-         digits += DebugValue(uv,                          pos, unit, rgb.b, 4);
+    // 음수 부호 있는 경우, 양수들만 1칸 우측으로 이동
+    float2 m = ceil(step(0., value2));
     
-    return rgb * digits;
+    // 모두 양수인 경우에는 제자리
+    if(m == float2(1., 1.))
+        m = float2(0.);
+    
+    float digits = DebugValue(uv - float2(m.x * unit * 4., unit * 6.),  pos, unit, value2.x, 4);
+         digits += DebugValue(uv - float2(m.y * unit * 4., 0.       ),  pos, unit, value2.y, 4);
+    return digits;
 }
 
-// 색상값 표시 - RGBA
-float3 DebugRGBA(float2 uv, float2 pos, float unit, float4 rgba)
+// Float3 debug with color
+float3 DebugValue(float2 uv, float2 pos, float unit, float3 value3)
 {
-    float digits = DebugValue(uv - float2(0., unit * 18.), pos, unit, rgba.r, 4);
-         digits += DebugValue(uv - float2(0., unit * 12.), pos, unit, rgba.g, 4);
-         digits += DebugValue(uv - float2(0., unit * 6.),  pos, unit, rgba.b, 4);
-         digits += DebugValue(uv,                          pos, unit, rgba.a, 4);
+    float3 m = ceil(step(0., value3));
+    if(m == float3(1., 1., 1.))
+        m = float3(0.);
+    
+    float digits = DebugValue(uv - float2(m.x * unit * 4., unit * 12.), pos, unit, value3.x, 4);
+         digits += DebugValue(uv - float2(m.y * unit * 4., unit * 6.),  pos, unit, value3.y, 4);
+         digits += DebugValue(uv - float2(m.z * unit * 4., 0.),         pos, unit, value3.z, 4);
+    
+    return (saturate(value3) + .1) * digits;
+}
+
+// Float4 debug with color
+float3 DebugValue(float2 uv, float2 pos, float unit, float4 value4)
+{
+    float4 m = ceil(step(0., value4));
+    if(m == float4(1., 1., 1., 1.))
+        m = float4(0.);
+    
+    float digits = DebugValue(uv - float2(m.x * unit * 4., unit * 18.), pos, unit, value4.x, 4);
+         digits += DebugValue(uv - float2(m.y * unit * 4., unit * 12.), pos, unit, value4.y, 4);
+         digits += DebugValue(uv - float2(m.z * unit * 4., unit * 6.),  pos, unit, value4.z, 4);
+         digits += DebugValue(uv - float2(m.w * unit * 4., 0.),         pos, unit, value4.w, 4);
           
-    return rgba.rgb * digits;
+    return value4.rgb * digits;
 }
 
 
@@ -521,11 +545,9 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     //col += Digit(uv, float2(0.1), 0.1, 7);
     //col += DigitDot(uv, float2(0.0), 0.1);
     
-    col += DebugValue(uv, -float2(0.2, -0.01), 0.01, -912.1189552);
-    
-    col += DebugRGB(uv, float2(0.2, 0.2), 0.02, float3(0.15, 0.56, 0.872));
-    
-    col += DebugRGBA(uv, float2(0.1, 0.6), 0.015, float4(1.0, 0.4525, 0.8651, 0.01));
+    col += DebugValue(uv, -float2(0.2, -0.01), 0.01, iTime);
+    col += DebugValue(uv, float2(0.2, 0.2), 0.02, float3(0.15, 0.56, 0.872));
+    col += DebugValue(uv, float2(0.1, 0.6), 0.015, float4(1.0, 0.4525, 0.8651, 0.01));
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
