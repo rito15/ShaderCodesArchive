@@ -227,13 +227,12 @@ float Drop(float2 uv, float2 center, float width, float height, float smoothness
 }
 
 /**************************************************************************************************
- * Digits
+ * Digit Debug
  **************************************************************************************************/
 // 기본 : 한 칸 채우기
 float DigitSquare(float2 uv, float2 center, float unit)
 {
     unit *= 0.5;
-    
     float rect = 1.- step(unit + 0.0001, abs(uv.x - center.x));
          rect *= 1.- step(unit + 0.0001, abs(uv.y - center.y));
     return rect;
@@ -243,6 +242,15 @@ float DigitSquare(float2 uv, float2 center, float unit)
 float DigitDot(float2 uv, float2 pivot, float unit)
 {
     return DigitSquare(uv, pivot + unit * 0.5, unit);
+}
+
+// 마이너스
+float DigitMinus(float2 uv, float2 pivot, float unit)
+{
+    float2 pivotPoint = pivot + unit * 0.5;
+    return DigitSquare(uv, pivotPoint + unit * float2(0.0, 2.0), unit) +
+           DigitSquare(uv, pivotPoint + unit * float2(1.0, 2.0), unit) +
+           DigitSquare(uv, pivotPoint + unit * float2(2.0, 2.0), unit);
 }
 
 // 숫자 표현 - pivot : 좌측 하단 기준점, unit : 단위 길이, digit : 정수 1개
@@ -272,7 +280,7 @@ float Digit(float2 uv, float2 pivot, float unit, int digit)
     
     // Digit 0 ~ 9
     float digit0 = dgRect - dg11 - dg12 - dg13;
-    float digit1 = dg20 + dg21 + dg22 + dg23 + dg24;
+    float digit1 = dg10 + dg11 + dg12 + dg13 + dg14; //dg20 + dg21 + dg22 + dg23 + dg24;
     float digit2 = dgRect - dg03 - dg11 - dg13 - dg21;
     float digit3 = dgRect - dg01 - dg03 - dg11 - dg13;
     float digit4 = dgRect - dg00 - dg01- dg10 - dg11 - dg13 - dg14;
@@ -285,18 +293,110 @@ float Digit(float2 uv, float2 pivot, float unit, int digit)
     
     switch(digit)
     {
-        case 0: return digit0;
-        case 1: return digit1;
-        case 2: return digit2;
-        case 3: return digit3;
-        case 4: return digit4;
-        case 5: return digit5;
-        case 6: return digit6;
-        case 7: return digit7;
-        case 8: return digit8;
-        case 9: return digit9;
+        case 0: return saturate(digit0);
+        case 1: return saturate(digit1);
+        case 2: return saturate(digit2);
+        case 3: return saturate(digit3);
+        case 4: return saturate(digit4);
+        case 5: return saturate(digit5);
+        case 6: return saturate(digit6);
+        case 7: return saturate(digit7);
+        case 8: return saturate(digit8);
+        case 9: return saturate(digit9);
     }
     return 0.;
+}
+
+// 대상 숫자 리턴 - unit : 한 칸 단위, value : 대상 값, cipher : 소수부 출력 자릿수
+float DebugValue(float2 uv, float2 pos, float unit, float value, int cipher)
+{
+    uv -= pos;
+    
+    float digits = 0.; // 결괏값
+    float2 cursor = float2(0., 0.);// 현재 커서 위치
+    float2 space  = float2(unit * 4., 0.); // 공백
+    
+    // 음수처리
+    if(value < 0.)
+    {
+     	digits += DigitMinus(uv, cursor, unit);
+        cursor += space;
+        value = -value;
+    }
+    
+    int   valueN = int(value); 	// 정수부
+    float valueF = frac(value); // 소수부
+    
+    bool printOn = false;
+    
+    // 정수부가 0일 경우
+    if(valueN == 0)
+    {
+     	digits += Digit(uv, cursor, unit, 0);
+        cursor += space;
+    }
+    else
+    {
+        // 정수부 출력
+        for(int div = 1000000000; div > 0; div /= 10)
+        {
+            int d = valueN / div;
+
+            if(d > 0 || printOn)
+            {
+                printOn = true;
+                digits += Digit(uv, cursor, unit, d);
+                cursor += space;
+
+                valueN -= (d * div);
+            }
+        }
+    }
+    
+    // 소숫점
+    if(cipher > 0)
+    {
+        digits += DigitDot(uv, cursor, unit);
+        cursor += space * 0.5;
+    }
+    
+    // 소수부 출력
+    for(int i = 1; i <= cipher; i++)
+    {
+        int d = int(valueF / 0.1);
+        digits += Digit(uv, cursor, unit, d);
+        cursor += space;
+        valueF = frac(valueF * 10.);
+    }
+    
+    return digits;
+}
+
+// override : 소숫점 4자리 표현
+float DebugValue(float2 uv, float2 pos, float unit, float value)
+{
+ 	return DebugValue(uv, pos, unit, value, 4);   
+}
+
+// 색상값 표시 - RGB
+float3 DebugRGB(float2 uv, float2 pos, float unit, float3 rgb)
+{
+    float digits = DebugValue(uv - float2(0., unit * 12.), pos, unit, rgb.r, 4);
+         digits += DebugValue(uv - float2(0., unit * 6.),  pos, unit, rgb.g, 4);
+         digits += DebugValue(uv,                          pos, unit, rgb.b, 4);
+    
+    return rgb * digits;
+}
+
+// 색상값 표시 - RGBA
+float3 DebugRGBA(float2 uv, float2 pos, float unit, float4 rgba)
+{
+    float digits = DebugValue(uv - float2(0., unit * 18.), pos, unit, rgba.r, 4);
+         digits += DebugValue(uv - float2(0., unit * 12.), pos, unit, rgba.g, 4);
+         digits += DebugValue(uv - float2(0., unit * 6.),  pos, unit, rgba.b, 4);
+         digits += DebugValue(uv,                          pos, unit, rgba.a, 4);
+          
+    return rgba.rgb * digits;
 }
 
 
@@ -418,8 +518,14 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     //col += drop;
     
     
-    col += Digit(uv, float2(0.1), 0.1, 7);
-    col += DigitDot(uv, float2(0.0), 0.1);
+    //col += Digit(uv, float2(0.1), 0.1, 7);
+    //col += DigitDot(uv, float2(0.0), 0.1);
+    
+    col += DebugValue(uv, -float2(0.2, -0.01), 0.01, -912.1189552);
+    
+    col += DebugRGB(uv, float2(0.2, 0.2), 0.02, float3(0.15, 0.56, 0.872));
+    
+    col += DebugRGBA(uv, float2(0.1, 0.6), 0.015, float4(1.0, 0.4525, 0.8651, 0.01));
     
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
