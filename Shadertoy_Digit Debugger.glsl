@@ -201,8 +201,8 @@ float DebugValue(float2 uv, float2 pos, float unit, float2 value2)
     return digits;
 }
 
-// Float3 debug with color
-float3 DebugValue(float2 uv, float2 pos, float unit, float3 value3)
+// Float3 debug (with color)
+float DebugValue(float2 uv, float2 pos, float unit, float3 value3)
 {
     float3 m = ceil(step(0., value3));
     if(m == float3(1., 1., 1.))
@@ -212,11 +212,12 @@ float3 DebugValue(float2 uv, float2 pos, float unit, float3 value3)
          digits += DebugValue(uv - float2(m.y * unit * 4., unit * 6.),  pos, unit, value3.y, 4);
          digits += DebugValue(uv - float2(m.z * unit * 4., 0.),         pos, unit, value3.z, 4);
     
-    return (saturate(value3) + .1) * digits;
+    //digits *= (saturate(value3) + .1); // Apply Color
+    return digits;
 }
 
-// Float4 debug with color
-float3 DebugValue(float2 uv, float2 pos, float unit, float4 value4)
+// Float4 debug (with color)
+float DebugValue(float2 uv, float2 pos, float unit, float4 value4)
 {
     float4 m = ceil(step(0., value4));
     if(m == float4(1., 1., 1., 1.))
@@ -227,7 +228,8 @@ float3 DebugValue(float2 uv, float2 pos, float unit, float4 value4)
          digits += DebugValue(uv - float2(m.z * unit * 4., unit * 6.),  pos, unit, value4.z, 4);
          digits += DebugValue(uv - float2(m.w * unit * 4., 0.),         pos, unit, value4.w, 4);
           
-    return value4.rgb * digits;
+    //digit *= (saturate(value4.rgb) + .1); // Apply Color
+    return digits;
 }
 
 
