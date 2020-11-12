@@ -148,6 +148,27 @@ float RectP(float2 uv, float2 p1, float2 p2, float smoothness)
     return rect;
 }
 
+// 이등변삼각형
+float Triangle(float2 uv, float2 pos, float2 size, float smoothness)
+{
+    float center = 0.5; // 무게중심 맞출 경우 :  2.0/3.0;
+    
+    float2  uvTri = (uv - pos) / (size * 2.0);
+    float tri = smoothstep(center + smoothness,    center - smoothness,    uvTri.y + abs(uvTri.x * 2.));
+         tri *= smoothstep(center - smoothness*.5, center + smoothness*.5, uvTri.y + 1.);
+    return tri;
+}
+
+// 정삼각형
+float ETriangle(float2 uv, float2 pos, float size, float smoothness)
+{
+    float center = 0.5; // 무게중심 맞출 경우 :  2.0/3.0;
+    float2  uvTri = (uv - pos) / (size * 2.0);
+    float eqTri = smoothstep(center + smoothness,    center - smoothness,    uvTri.y + abs(uvTri.x * 2.));
+         eqTri *= smoothstep(center - smoothness*.5, center + smoothness*.5, uvTri.y + 1.);
+    return eqTri;
+}
+
 // 원 : 중심좌표, 반지름
 float Circle(float2 uv, float2 center, float radius, float smoothness)
 {
@@ -225,6 +246,13 @@ float smax(float a, float b, float k)
     return mix(a, b, h) + h * (1.0 - h) * k * 0.5;
 }
 
+// Smooth Min
+float smin(float a, float b, float k)
+{
+	float h = clamp( 0.5 + 0.5 * (b - a) / k, 0.0, 1.0 );
+	return lerp(b, a, h) - k * h * (1.0 - h);
+}
+
 // 회전 : 기본 시계방향
 float2 Rotate(float2 org, float deg)
 {
@@ -254,14 +282,20 @@ float2 UvPulse(float2 uv, float range, float t)
     return uv * (1. + sin(t)* range);
 }
 
-// 꿀렁꿀렁 - a, b, c : 10, 2, 0.2 기본 / t : 시간
+// 꿀렁꿀렁 - a : x꿀렁, b : y꿀렁, c : 꿀렁 범위 / t : 시간
 float2 UvWave(float2 uv, float a, float b, float c, float t)
 {
     float x = abs(uv.x) * a;
     float y = abs(uv.y) * b;
-    float w = 1. + abs(sin(x * y + t) * sin(x * y + t) * c);
+    float k;
     
-    return float2(uv.x * w, uv.y);
+    k = sin(x * y + t); // 기본
+    //k *= cos(x *b + cos(t)*0.5) * 0.5 + 0.5; 
+    
+    float kkc = abs(k * k * c);
+    float w1 = 1. + kkc * a;
+    float w2 = 1. + kkc * b;
+    return float2(uv.x * w1, uv.y / w2);
 }
 
 // 진동
@@ -281,6 +315,18 @@ float2 UvScatter(float2 uv, float2 scale)
     float y = uv.y;
     float2 s = 2. - float2(cos(x * scale) * cos(y * scale));
     return uv * s;
+}
+
+/**************************************************************************************************
+ * Screen Filter Functions 
+ **************************************************************************************************/
+// 모자이크
+float FilterMosaic(float2 uv, float scale, float smoothness)
+{
+    float2 uv2 = frac((uv - float2(0.5, 0.5)) * scale);
+    float2 mBase = uv2 - float2(0.5, 0.5);
+    float mosaic = smoothstep(0.5, 0.5 - smoothness, length(mBase));
+    return mosaic;
 }
 
 /**************************************************************************************************
@@ -305,10 +351,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // 특정 UV 적용
     //uv2 = UvTile(uv2, float2(2., 2.), float2(0.5));
     //uv2 = UvRotate(uv2, iTime);
-    uv2 = UvPulse(uv2, 0.01, iTime * 10.0);
-    uv2 = UvWave(uv2, 0.3, 2., 0.2, iTime * 5.0);
-    uv2 = UvVibrate(uv2, 1., -1., 0.50, iTime * 5.0);
-    uv2 = UvScatter(uv2, float2(100.0));
+    //uv2 = UvPulse(uv2, 0.01, iTime * 10.0);
+    uv2 = UvWave(uv2, 1.0, 0.5, 0.1, iTime * 5.0);
+    //uv2 = UvVibrate(uv2, 1., -1., 0.50, iTime * 5.0);
+    //uv2 = UvScatter(uv2, float2(1000.0));
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 선분
@@ -323,8 +369,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float sdvLine = SDVLine(uv2, 0.4, 0.4, 0.1, 0.01);
     
     // 사각형
-    float rect1 = Rect(uv2, float2(0., 0.), float2(1.0, 1.0), 0.01);
+    float rect1 = Rect(uv2, float2(0., 0.), float2(1.0, 1.0), 0.1);
     float rect2 =  RectP(uv2, float2(0.2, 0.2), float2(0.4, 0.6), 0.01);
+    
+    // 이등변삼각형
+    float triangle = Triangle(uv2, float2(0.0, 0.0), float2(0.4, 0.4), 0.1);
+    
+    // 정삼각형
+    float eTriangle = ETriangle(uv2, float2(0.0, 0.0), 1.0, 0.01);
     
     // 원, 타원
     float circle1 = Circle(uv2, float2(0., 0.), 0.2, 0.01);
@@ -341,41 +393,33 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float sWave = SineWave(uv2, float2(0., 0.4), 5., 0.2, 0.2, 0.5);
     
     ////////////////////////////////////////////////////////////////////////////////////
-    // 정삼각형
-    float2  eqTriPos = float2(0.0, 0.0);
-    float eqTriSize = 0.5;
-    float eqTriCenter = 0.5; // 무게중심 맞출 경우 :  2.0/3.0;
-    float eqTriBlur = 0.02;
-    float2  uvEqTri = (uv2 - eqTriPos) / (eqTriSize * 2.0);
-    float eqTri = smoothstep(eqTriCenter + eqTriBlur, eqTriCenter - eqTriBlur, uvEqTri.y + abs(uvEqTri.x * 2.));
-         eqTri *= smoothstep(eqTriCenter - eqTriBlur*.5, eqTriCenter + eqTriBlur*.5, uvEqTri.y + 1.);
-    
-    ////////////////////////////////////////////////////////////////////////////////////
-    // 이등변삼각형
-    float2  triPos    = float2(0.0, 0.0);
-    float2  triSizeWH = float2(0.6, 0.4);
-    float triCenter = 0.5; // 무게중심 맞출 경우 :  2.0/3.0;
-    float triBlur = 0.01;
-    float2  uvTri = (uv2 - triPos) / (triSizeWH * 2.0);
-    float tri = smoothstep(triCenter + triBlur, triCenter - triBlur, uvTri.y + abs(uvTri.x * 2.));
-         tri *= smoothstep(triCenter - triBlur*.5, triCenter + triBlur*.5, uvTri.y + 1.);
-    
-    ////////////////////////////////////////////////////////////////////////////////////
     // 별(십자) : TODO
     float crossStarSize = 0.2;
     float crossStarBlur = 0.2;
-    float crossStar = smoothstep(crossStarSize, crossStarSize - crossStarBlur, abs(uv2.x * uv2.y));
+    float crossStar = smoothstep(crossStarSize, crossStarSize - crossStarBlur, abs(uv2.x * uv2.y) * 5.);
     
     //col += heart;
     
-    //col *= uv.xyx;
     
-    col += rect1;
+    float ts = sin(iTime * 0.5)*0.5;
+    
+    float hh = Heart(uv2, float2(0.2, sin(iTime)*0.5), float2(0.8, 0.4), 0.2);
+    
+    float cc1 = Circle(uv2, float2(0., 0 ), 0.3, 0.1);
+    float cc2 = Circle(uv2, float2(0., ts), 0.15, 0.1);
+    float cc3 = Circle(uv2, float2(ts, 0 ), 0.15, 0.1);
+    
+    col += smoothstep(0.4, 0.5, smax(smax(cc1, cc2, 0.5), cc3, 0.5) );
+    
+    col *= uv.yxx * 2.0;
+    
+    // 스크린 필터
+    //col *= FilterMosaic(uv, 100., sin(iTime * 10.) * 0.1 + 0.5);
     
     // 디버그 옵션
-    //col += debugCenterLine(uv); // 중심   디버그
+    col += debugCenterLine(uv); // 중심   디버그
     //col += debugOutLine(uv);    // 테두리 디버그
-    //col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
+    col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
     //col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
     
     fragColor = vec4(col,1.0);
