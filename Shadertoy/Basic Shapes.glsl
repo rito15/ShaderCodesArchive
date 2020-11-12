@@ -218,7 +218,7 @@ float Drop(float2 uv, float2 center, float2 size, float smoothness)
 // 하트
 float Heart(float2 uv, float2 center, float2 size, float smoothness)
 {
-    float2  uvHeart   = (uv - center) / size * float2(1.15, 0.97);
+    float2  uvHeart   = (uv - center) / (size * float2(1.15, 0.97));
     float2  heartBase = float2(uvHeart.x, uvHeart.y - sqrt(abs(uvHeart.x)) * 0.7 + 0.18);
     float heart = smoothstep(0.87, 0.87 - smoothness, length(heartBase));
     return heart;
@@ -236,8 +236,10 @@ float SineWave(float2 uv, float2 pos, float frequency, float amplitude, float th
 
 // 네잎클로버
 
+// 나선 : Spiral
+
 /**************************************************************************************************
- * Functions 
+ * Calc Functions 
  **************************************************************************************************/
 // Smooth Max
 float smax(float a, float b, float k)
@@ -330,6 +332,24 @@ float FilterMosaic(float2 uv, float scale, float smoothness)
 }
 
 /**************************************************************************************************
+ * Functions 
+ **************************************************************************************************/
+
+float Random11(float seed, float min, float max)
+{
+    float t = frac(sin(seed * 13.421 + 23.512) * 17593.39482);
+    return lerp(min, max, t);
+}
+
+float GetT(float seed)
+{
+    float r1 = Random11(seed, 0.3, 0.6);
+    
+    float k = atan( lerp(-1., 0., frac(iTime * r1) ) );
+    return k;
+}
+
+/**************************************************************************************************
  * Main
  **************************************************************************************************/
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -340,7 +360,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float2 adjMul = float2(ratioWH, 1.);
     float2 adjSub = float2((1.-ratioHW) * 0.5 * ratioWH, 0.);
     float2 uv = (fragCoord/iResolution.xy) * adjMul - adjSub;
-    float3 col; // 최종 컬러
+    
+    float3 shp = float3(0.); // 최종 모양
+    float3 col = float3(1.); // 최종 컬러
+    // => 최종 결과 = shp * col
     
     // uv2 이동
     float2 uvOffset = float2(0.0, 0.0);
@@ -349,12 +372,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float2 uv2 = uv *2. - 1. - uvOffset;
     
     // 특정 UV 적용
-    //uv2 = UvTile(uv2, float2(2., 2.), float2(0.5));
-    //uv2 = UvRotate(uv2, iTime);
-    //uv2 = UvPulse(uv2, 0.01, iTime * 10.0);
-    uv2 = UvWave(uv2, 1.0, 0.5, 0.1, iTime * 5.0);
-    //uv2 = UvVibrate(uv2, 1., -1., 0.50, iTime * 5.0);
-    //uv2 = UvScatter(uv2, float2(1000.0));
+    float2 uv3 = uv2;
+    //uv3 = UvTile(uv3, float2(2., 2.), float2(0.5));
+    //uv3 = UvRotate(uv3, iTime);
+    //uv3 = UvPulse(uv3, 0.01, iTime * 10.0);
+    uv3 = UvWave(uv3, 0.5, 0.5, 0.1, iTime * 5.0);
+    //uv3 = UvVibrate(uv3, 1., -1., 0.50, iTime * 5.0);
+    //uv3 = UvScatter(uv3, float2(1000.0));
     
     ////////////////////////////////////////////////////////////////////////////////////
     // 선분
@@ -387,7 +411,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float drop = Drop(uv2, float2(0.0, 0.0), float2(0.4, 0.8), 0.01);
     
     // 하트 : uv, center, size, smoothness
-    float heart = Heart(uv2, float2(0.,0.), float2(1.6, 0.8), 0.05);
+    float heart = Heart(uv3, float2(0.,0.), float2(1.0, 1.0), 0.05);
+    float heartShade = Heart(uv3, float2(0.,0.), float2(1.0, 1.0), 0.06);
+    float heartLight = smoothstep(1.0, -0.5, length(uv3 - float2(-0.25, 0.5))) * 0.6 + 0.1;
     
     // 사인그래프 : uv, pos, frequency, amplitude, thickness, smoothness
     float sWave = SineWave(uv2, float2(0., 0.4), 5., 0.2, 0.2, 0.5);
@@ -398,29 +424,34 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float crossStarBlur = 0.2;
     float crossStar = smoothstep(crossStarSize, crossStarSize - crossStarBlur, abs(uv2.x * uv2.y) * 5.);
     
-    //col += heart;
+    // 모양 ==================================================================
+    
+    shp += heart;
     
     
-    float ts = sin(iTime * 0.5)*0.5;
+    // 색상 ==================================================================
     
-    float hh = Heart(uv2, float2(0.2, sin(iTime)*0.5), float2(0.8, 0.4), 0.2);
+    //col *= uv.yxx * 2.0;
     
-    float cc1 = Circle(uv2, float2(0., 0 ), 0.3, 0.1);
-    float cc2 = Circle(uv2, float2(0., ts), 0.15, 0.1);
-    float cc3 = Circle(uv2, float2(ts, 0 ), 0.15, 0.1);
+    float gd = smoothstep(0. , 1.0, length(uv2));
+    col = float3(gd, 1. - gd * cos(uv.y + iTime), sin(uv.x + iTime))
+        * heartShade
+        * heartLight;
     
-    col += smoothstep(0.4, 0.5, smax(smax(cc1, cc2, 0.5), cc3, 0.5) );
     
-    col *= uv.yxx * 2.0;
+    // 스크린 필터 ============================================================
     
-    // 스크린 필터
     //col *= FilterMosaic(uv, 100., sin(iTime * 10.) * 0.1 + 0.5);
     
-    // 디버그 옵션
-    col += debugCenterLine(uv); // 중심   디버그
-    //col += debugOutLine(uv);    // 테두리 디버그
-    col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
-    //col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
     
-    fragColor = vec4(col,1.0);
+    // 디버그 옵션 ============================================================
+    
+    float3 dbg = float3(0.);
+    dbg += debugCenterLine(uv); // 중심   디버그
+    dbg += debugOutLine(uv);    // 테두리 디버그
+    dbg += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
+    //dbg += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
+    
+    // =========================================================================
+    fragColor = vec4(shp * col + (1.-shp) * dbg,1.0);
 }
