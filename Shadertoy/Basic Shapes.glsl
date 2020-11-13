@@ -190,7 +190,7 @@ float CircleP(float2 uv, float2 p1, float2 p2, float smoothness)
     return smoothstep(1., 1. - smoothness, length((uv - center) / size));
 }
 
-// 물방울 : TODO
+// 물방울
 float Drop(float2 uv, float2 center, float2 size, float smoothness)
 {
     float2 uvDrop = (uv - center) / (size * float2(1., 0.5));
