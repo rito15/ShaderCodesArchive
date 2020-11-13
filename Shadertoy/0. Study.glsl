@@ -22,6 +22,8 @@
  **************************************************************************************************/
 #define S(a, b, t) smoothstep(a, b, t)
 
+#define PI 3.141592653589793
+
 
 /**************************************************************************************************
  * DEBUG Functions 
@@ -504,7 +506,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     // 하트
     float2  heartPos    = float2(0.0, 0.0);
-    float2  heartSizeWH = float2(0.4, 0.4);
+    float2  heartSizeWH = float2(1.0, 1.0);
     float heartBlur = 0.01;
     float2  uvHeart   = (uv2 - heartPos) / (heartSizeWH * float2(1.15, 0.97));
     float2  heartBase = float2(uvHeart.x, uvHeart.y - sqrt(abs(uvHeart.x)) * 0.7 + 0.18);
@@ -539,7 +541,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     ////////////////////////////////////////////////////////////////////////////////////
     
     // 최종 색상
-    //col += drop;
+    col += heart;
     
     
     //col += Digit(uv, float2(0.1), 0.1, 7);
@@ -554,7 +556,7 @@ void mainImage( out float4 fragColor, in float2 fragCoord )
     // 디버그 옵션
     col += debugCenterLine(uv); // 중심   디버그
     col += debugOutLine(uv);    // 테두리 디버그
-    //col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
+    col += debugGrid(uv, 0.1);  // 그리드 디버그 : uv
     //col += debugGrid(uv, 0.05); // 그리드 디버그 : uv2
     
     fragColor = float4(col,1.0);
