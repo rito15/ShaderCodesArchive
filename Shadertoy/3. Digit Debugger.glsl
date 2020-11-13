@@ -1,27 +1,9 @@
-/**************************************************************************************************
- * DEFINITIONS : Unity Compatibility
- **************************************************************************************************/
-#define float2   vec2
-#define float3   vec3
-#define float4   vec4
-#define float2x2 mat2
-#define float3x3 mat3
-#define float4x4 mat3
-
-#define frac(x)     fract(x)
-#define saturate(x) clamp(x, 0., 1.)
-
-#define atan2(x,y)    atan(y,x)
-#define tex2D(s,t)    texture(s,t)
-#define mul(mat,vec)  vec*mat;
-
-#define lerp(a,b,t) mix(a,b,t)
 
 /**************************************************************************************************
- * Basic Shapes
+ * Digit Debug
  **************************************************************************************************/
 // 직사각형 : 좌하단, 우상단 정점 좌표
-float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
+float DebugRect(float2 uv, float2 p1, float2 p2, float smoothness)
 {
     float2 center = (p1 + p2) * 0.5;
     float  width  = (p2.x - p1.x) * 0.5;
@@ -33,9 +15,6 @@ float Rect(float2 uv, float2 p1, float2 p2, float smoothness)
     return rect;
 }
 
-/**************************************************************************************************
- * Digit Debug
- **************************************************************************************************/
 // 기본 : 한 칸 채우기
 float DigitSquare(float2 uv, float2 center, float unit)
 {
@@ -67,7 +46,7 @@ float Digit(float2 uv, float2 pivot, float unit, int digit)
     float2 pivotPoint = pivot + unit * 0.5;
     
     // Full Rect
-    float dgRect = Rect(uv, pivot, pivot + unit * float2(3.0, 5.0), 0.0001);
+    float dgRect = DebugRect(uv, pivot, pivot + unit * float2(3.0, 5.0), 0.0001);
     
     // Dots
     float dg00 = DigitSquare(uv, pivotPoint, unit);
@@ -267,7 +246,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float4 f42 = float4(0.2,  0.22, 0.123, 2.4556);
     float4 f43 = float4(0. , -0.33, 0.595, 1.088);
     
-    col += DebugValue(uv, float2(-0.3, 0.01), 0.02, f11);
+    col += DebugValue(uv, float2(-0.3, 0.01), 0.02, iTime);
     col += DebugValue(uv, float2(-0.3, 0.13), 0.02, f12);
     
     //col += DebugValue(uv, float2(-0.3, 0.30), 0.01, f21);
